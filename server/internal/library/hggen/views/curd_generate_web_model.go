@@ -46,8 +46,6 @@ func (l *gCurd) generateWebModelImport(ctx context.Context, in *CurdPreviewInput
 	importBuffer := bytes.NewBuffer(nil)
 	constBuffer := bytes.NewBuffer(nil)
 
-	importBuffer.WriteString("import { h, ref } from 'vue';\n")
-
 	// 导入基础组件
 	if len(in.options.Step.ImportModel.NaiveUI) > 0 {
 		importBuffer.WriteString("import " + ImportWebMethod(in.options.Step.ImportModel.NaiveUI) + " from 'naive-ui';\n")
@@ -120,14 +118,27 @@ func (l *gCurd) generateWebModelStateItems(ctx context.Context, in *CurdPreviewI
 				dataType = parts[0]
 			}
 		}
+
+		isStr := isStringType(field.TsType, dataType)
+		isArray := strings.HasPrefix(dataType, "_") || strings.Contains(field.SqlType, "[]")
+
 		var value = field.DefaultValue
 		if value == nil {
-			value = "null"
+			if isArray {
+				value = "null"
+			} else if isStr {
+				value = ""
+			} else {
+				value = "null"
+			}
 		}
-		//注释为空判断 避免模版生成的model.ts重复加引号
-		//if value == "" {
-		//	value = `''`
-		//}
+		if value == "" {
+			if isArray || !isStr {
+				value = "null"
+			}
+		} else if valueStr, ok := value.(string); ok && isStr {
+			value = valueStr
+		}
 
 		// 选项组件默认值调整
 		if gconv.Int(value) == 0 && IsSelectFormMode(field.FormMode) {
@@ -146,6 +157,7 @@ func (l *gCurd) generateWebModelStateItems(ctx context.Context, in *CurdPreviewI
 		items = append(items, &StateItem{
 			Name:         field.TsName,
 			DefaultValue: value,
+			DataType:     dataType,
 			Dc:           field.Dc,
 		})
 
@@ -309,7 +321,7 @@ func (l *gCurd) generateWebModelFormSchemaEach(buffer *bytes.Buffer, fields []*s
 
 		// 这里根据编辑表单组件来进行推断，如果没有则使用默认input，这可能会导致和查询条件所需参数不符的情况
 		switch field.FormMode {
-		case FormModeInput, FormModeInputTextarea, FormModeInputEditor:
+		case FormModeInput, FormModeInputTextarea, FormModeInputEditor, FormModeInputYaml:
 			component = defaultComponent
 
 		case FormModeInputNumber:
@@ -451,4 +463,31 @@ func (l *gCurd) generateWebModelColumnsEach(buffer *bytes.Buffer, in *CurdPrevie
 		buffer.WriteString(component)
 	}
 	return
+}
+
+// isStringType 判断字段是否为字符串类型
+func isStringType(tsType, dataType string) bool {
+	// 根据 TypeScript 类型判断
+	if tsType == "string" {
+		return true
+	}
+
+	// 根据数据库数据类型判断
+	stringTypes := []string{
+		// mysql
+		"varchar", "char", "text", "longtext", "mediumtext", "tinytext",
+		"nvarchar", "nchar", "ntext",
+		"string", "enum", "set",
+		// pgsql
+		"bpchar", "date", "time", "timetz", "timestamp", "timestamptz", "interval",
+		"uuid", "bytea", "inet", "cidr", "macaddr", "macaddr8", "bit", "varbit", "json", "jsonb",
+		"point", "line", "lseg", "box", "path", "polygon", "circle", "money",
+	}
+
+	for _, t := range stringTypes {
+		if strings.EqualFold(dataType, t) {
+			return true
+		}
+	}
+	return false
 }

@@ -1,6 +1,6 @@
 // Package consts
 // @Link  https://github.com/bufanyun/hotgo
-// @Copyright  Copyright (c) 2023 HotGo CLI
+// @Copyright  Copyright (c) 2025 HotGo CLI
 // @Author  Ms <133814250@qq.com>
 // @License  https://github.com/bufanyun/hotgo/blob/master/LICENSE
 package consts
@@ -14,6 +14,7 @@ const (
 	Unknown               = "Unknown" // Unknown
 	SuperRoleKey          = "super"   // 超管角色唯一标识符，通过角色验证超管
 	MaxServeLogContentLen = 2048      // 最大保留服务日志内容大小
+	SysDefaultLanguage    = "zh_CN"   // 系统默认语言，当配置文件没有国际化配置时生效
 )
 
 // curd.
@@ -28,4 +29,9 @@ const (
 	TenantId   = "tenant_id"   // 租户ID
 	MerchantId = "merchant_id" // 商户ID
 	UserId     = "user_id"     // 用户ID
+)
+
+const (
+	DBMysql = "mysql"
+	DBPgsql = "pgsql"
 )
